@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
 	"time"
 )
 
@@ -21,4 +23,50 @@ func parseReadings(data []byte) ([]AirQualityReading, error) {
 	}
 
 	return airQualityReading, nil
+}
+
+func calculateAverage(readings []AirQualityReading) map[string]float64 {
+	if len(readings) == 0 {
+		return nil
+	}
+
+	totals := make(map[string]float64)
+	count := float64(len(readings))
+
+	for _, reading := range readings {
+		val := reflect.ValueOf(reading)
+		for i := 0; i < val.NumField(); i++ {
+			field := val.Type().Field(i)
+			if field.Type.Kind() == reflect.Float64 {
+				totals[field.Name] += val.Field(i).Float()
+			}
+		}
+	}
+
+	averages := make(map[string]float64)
+	for k, v := range totals {
+
+		averages[k] = v / count
+	}
+	return averages
+}
+
+func main() {
+
+	jsonData := []byte(`[
+		{"sensor_id": "S001", "timestamp": "2023-12-28T10:00:00Z", "pm25": 25.5, "co2": 410.2},
+		{"sensor_id": "S002", "timestamp": "2023-12-28T10:05:00Z", "pm25": 30.8, "co2": 405.7},
+		{"sensor_id": "S001", "timestamp": "2023-12-28T11:00:00Z", "pm25": 18.2, "co2": 395.1}
+	]`)
+
+	readings, err := parseReadings(jsonData)
+	if err != nil {
+		fmt.Println("Error parsing readings:", err)
+		return
+	}
+
+	averages := calculateAverage(readings)
+	for pollutant, avg := range averages {
+		fmt.Printf("Average %s: %.2f\n", pollutant, avg)
+	}
 }
