@@ -51,6 +51,53 @@ func calculateAverage(readings []AirQualityReading) map[string]float64 {
 	return averages
 }
 
+func findHighestPollutantByHour(readings []AirQualityReading) map[int]string {
+
+	if len(readings) == 0 {
+		return nil
+	}
+
+	result := make(map[int]string)
+	averagePollutants := make(map[int]map[string]float64)
+	count := make(map[int]map[string]float64)
+
+	for _, reading := range readings {
+
+		hour := reading.Timestamp.Hour()
+		if _, ok := averagePollutants[hour]; !ok {
+			averagePollutants[hour] = make(map[string]float64)
+			count[hour] = make(map[string]float64)
+		}
+
+		val := reflect.ValueOf(reading)
+		for i := 0; i < val.NumField(); i++ {
+			field := val.Type().Field(i)
+			if field.Type.Kind() == reflect.Float64 {
+
+				averagePollutants[hour][field.Name] += val.Field(i).Float()
+				count[hour][field.Name]++
+			}
+		}
+	}
+
+	for hour, pollutants := range averagePollutants {
+		highestPollutant := ""
+		highestAverage := 0.0
+
+		for pollutant, total := range pollutants {
+			average := total / count[hour][pollutant]
+			if average > highestAverage {
+				highestAverage = average
+				highestPollutant = pollutant
+			}
+		}
+
+		result[hour] = highestPollutant
+	}
+
+	return result
+}
+
 func main() {
 
 	jsonData := []byte(`[
@@ -69,4 +116,10 @@ func main() {
 	for pollutant, avg := range averages {
 		fmt.Printf("Average %s: %.2f\n", pollutant, avg)
 	}
+
+	result := findHighestPollutantByHour(readings)
+	for hour, pollutant := range result {
+		fmt.Printf("Hour %d: Highest Pollutant - %s\n", hour, pollutant)
+	}
+
 }
