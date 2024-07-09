@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 	"time"
+
+	"github.com/Nok012/go-test/entity"
 )
 
 type AirQualityReading struct {
@@ -100,6 +102,8 @@ func findHighestPollutantByHour(readings []AirQualityReading) map[int]string {
 
 func main() {
 
+	entity.SetupDatabase()
+
 	jsonData := []byte(`[
 		{"sensor_id": "S001", "timestamp": "2023-12-28T10:00:00Z", "pm25": 25.5, "co2": 410.2},
 		{"sensor_id": "S002", "timestamp": "2023-12-28T10:05:00Z", "pm25": 30.8, "co2": 405.7},
@@ -120,6 +124,15 @@ func main() {
 	result := findHighestPollutantByHour(readings)
 	for hour, pollutant := range result {
 		fmt.Printf("Hour %d: Highest Pollutant - %s\n", hour, pollutant)
+
+		highestPollutant := entity.HighestPollutant{
+			Hour:      hour,
+			Pollutant: pollutant,
+		}
+		if err := entity.DB().Create(&highestPollutant).Error; err != nil {
+			fmt.Println("error :", err.Error())
+		}
+
 	}
 
 }
